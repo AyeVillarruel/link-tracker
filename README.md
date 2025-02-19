@@ -36,7 +36,7 @@ Este proyecto fue desarrollado en **NestJS** y cuenta con **Swagger** para docum
 
 ### 1️⃣ Clonar el repositorio
 ```sh
-$ git clone https://github.com/tu-usuario/link-tracker.git
+$ git clone https://github.com/AyeVillarruel/link-tracker.git
 $ cd link-tracker
 ```
 
