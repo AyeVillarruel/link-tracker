@@ -1,157 +1,130 @@
-# Link Tracker - API REST con NestJS
+# 📌 Link Tracker API
 
-## Descripción 📌
-Link Tracker es un sistema para acortar y rastrear URLs. Permite obtener estadísticas sobre la cantidad de veces que se accedió a cada enlace, además de establecer reglas de negocio como la expiración de links o la protección mediante contraseñas.
+Esta es una API para acortar enlaces y redirigirlos a sus URLs originales. Incluye autenticación opcional mediante contraseña y estadísticas de uso.
 
-Este proyecto fue desarrollado en **NestJS** y cuenta con **Swagger** para documentación y **Jest** para pruebas automatizadas.
+## 🚀 Configuración del Proyecto
 
----
+### 📦 Instalación
 
-## 🚀 Características
+1. **Clonar el repositorio:**
+   ```sh
+   git clone https://github.com/AyeVillarruel/link-tracker.git
+   cd link-tracker
+   ```
 
-- ✅ **Acortar URLs** mediante un endpoint `POST`
-- 🔄 **Redireccionamiento** a la URL original a partir de un enlace corto
-- 📊 **Obtener estadísticas** sobre los accesos a un enlace
-- 🔐 **Protección con contraseña** para acceder a ciertas URLs
-- ⏳ **Expiración de enlaces** configurable
-- 🛠 **Invalidación de links** para evitar accesos posteriores
-- 📑 **Swagger integrado** para documentación interactiva
-- 🧪 **Pruebas automatizadas** con Jest
+2. **Instalar dependencias:**
+   ```sh
+   npm install
+   ```
 
----
+3. **Configurar variables de entorno:**
+   - Copia el archivo de ejemplo y renómbralo a `.env`:
+     ```sh
+     cp .env.example .env
+     ```
+   - Edita el archivo `.env` y reemplaza los valores con tus credenciales de MySQL:
+     ```sh
+     DB_HOST=localhost
+     DB_PORT=3306
+     DB_USER=tu_usuario
+     DB_PASSWORD=tu_contraseña
+     DB_NAME=link_tracker_db
+     ```
 
-## 📌 Tecnologías utilizadas
+## 🗄️ Configuración de la Base de Datos
 
-- **NestJS** (framework principal)
-- **TypeORM** (ORM para la base de datos)
-- **MySQL** (base de datos relacional)
-- **Swagger** (documentación de API)
-- **Jest** (pruebas automatizadas)
-- **Bcrypt** (para encriptar contraseñas)
-- **UUID** (generación de IDs únicos)
+Antes de ejecutar el proyecto, necesitas crear una base de datos en MySQL. Asegúrate de tener MySQL instalado y en ejecución.
 
----
+### **📌 Creación de la base de datos en MySQL**
 
-## 🛠 Instalación y configuración
+1. **Abre MySQL desde la terminal o consola:**  
+   ```sh
+   mysql -u root -p
+   ```
+   *(Si tu usuario no es `root`, reemplázalo con el usuario correcto).*
 
-### 1️⃣ Clonar el repositorio
+2. **Crea la base de datos:**  
+   ```sql
+   CREATE DATABASE link_tracker_db;
+   ```
+
+3. **Verifica que la base de datos se creó correctamente:**  
+   ```sql
+   SHOW DATABASES;
+   ```
+
+4. **Cierra MySQL escribiendo:**  
+   ```sql
+   EXIT;
+   ```
+
+## 🏃‍♀️ Ejecución del Proyecto
+
+Para iniciar el servidor en modo desarrollo:
 ```sh
-$ git clone https://github.com/AyeVillarruel/link-tracker.git
-$ cd link-tracker
+npm run start
 ```
 
-### 2️⃣ Instalar dependencias
-```sh
-$ npm install
+Para ver la documentación Swagger, accede a:
+```
+http://localhost:3000/api
 ```
 
-### 3️⃣ Configurar variables de entorno
-Crea un archivo **`.env`** en la raíz del proyecto y configura la base de datos:
-```env
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=root
-DB_PASSWORD=tu_contraseña
-DB_NAME=link_tracker
-```
+## 🛠️ Endpoints
 
-### 4️⃣ Levantar la base de datos (Docker opcional)
-Si tienes Docker instalado, puedes ejecutar:
-```sh
-$ docker-compose up -d
-```
-O si deseas correr la base de datos manualmente, asegúrate de que MySQL esté corriendo.
+### **Crear un enlace acortado**
+- **Método:** `POST /links`
+- **Cuerpo:**
+  ```json
+  {
+    "originalUrl": "https://www.ejemplo.com",
+    "password": "opcional",
+    "expirationDate": "2025-12-31"
+  }
+  ```
+- **Respuesta:**
+  ```json
+  {
+    "shortenedUrl": "abc123"
+  }
+  ```
 
-### 5️⃣ Ejecutar migraciones
-```sh
-$ npm run typeorm migration:run
-```
+### **Redirigir a la URL original**
+- **Método:** `GET /links/{shortenedUrl}`
+- **Parámetro:** `shortenedUrl` (Código acortado del enlace)
+- **Query param:** `password` (opcional, si el enlace está protegido)
+- **Respuesta:** Redirección 302 a la URL original
 
-### 6️⃣ Iniciar el servidor
-```sh
-$ npm run start:dev
-```
+### **Obtener estadísticas de un enlace**
+- **Método:** `GET /links/{shortenedUrl}/stats`
+- **Respuesta:**
+  ```json
+  {
+    "shortenedUrl": "abc123",
+    "originalUrl": "https://www.ejemplo.com",
+    "clicks": 10,
+    "isValid": true,
+    "createdAt": "2025-02-19T12:00:00Z",
+    "expirationDate": "2025-12-31T00:00:00Z"
+  }
+  ```
 
-La API estará disponible en **`http://localhost:3000`**
+### **Invalidar un enlace**
+- **Método:** `PUT /links/{shortenedUrl}/invalidate`
+- **Parámetro:** `shortenedUrl`
+- **Respuesta:**
+  ```json
+  {
+    "message": "El enlace ha sido invalidado exitosamente."
+  }
+  ```
 
 ---
 
-## 🔍 Endpoints disponibles
+## ⚠️ Notas Importantes
 
-### 📌 **1. Crear un link acortado**
-**Método:** `POST /links`
-```json
-{
-  "originalUrl": "https://www.fierastudio.com",
-  "password": "123456",
-  "expirationDate": "2025-02-20T23:59:59.000Z"
-}
-```
-✅ **Respuesta esperada:**
-```json
-{
-  "link": "http://localhost:3000/links/aBsJu",
-  "shortenedUrl": "aBsJu",
-  "target": "https://www.fierastudio.com",
-  "valid": true
-}
-```
+- **Redirección con `res.redirect()`:** La mejor práctica para redireccionar es usar `res.redirect()` en una aplicación web. Sin embargo, para facilitar pruebas en Postman y Swagger, se ha añadido una opción para abrir la URL en el sistema.
+- **Swagger:** Se agregó para mejorar la experiencia de testeo y evaluación de los endpoints.
+- **Testing:** Se recomienda agregar pruebas para validar la funcionalidad de los enlaces acortados y la seguridad de las contraseñas.
 
-### 📌 **2. Redirección a la URL original**
-**Método:** `GET /links/:shortenedUrl`
 
-📌 **Importante:** _El redireccionamiento se maneja siempre con `res.redirect(url)`, pero para facilitar pruebas en Swagger y Postman, se agregó una apertura manual del enlace en el sistema._
-
-### 📌 **3. Obtener estadísticas de un link**
-**Método:** `GET /links/:shortenedUrl/stats`
-✅ **Respuesta esperada:**
-```json
-{
-  "shortenedUrl": "aBsJu",
-  "originalUrl": "https://www.fierastudio.com",
-  "clicks": 10,
-  "isValid": true,
-  "createdAt": "2025-02-15T12:00:00.000Z",
-  "expirationDate": "2025-02-20T23:59:59.000Z"
-}
-```
-
-### 📌 **4. Invalidar un link**
-**Método:** `PUT /links/:shortenedUrl/invalidate`
-✅ **Respuesta esperada:**
-```json
-{
-  "message": "El enlace ha sido invalidado exitosamente."
-}
-```
-
----
-
-## 📑 Pruebas
-Para ejecutar los tests:
-```sh
-$ npm run test
-```
-Para ejecutar las pruebas con cobertura:
-```sh
-$ npm run test:cov
-```
-
----
-
-## 📌 Swagger - Documentación interactiva
-La documentación de la API se encuentra en **`http://localhost:3000/api`**.
-
-Puedes probar los endpoints directamente desde Swagger.
-
----
-
-## 🚀 Mejoras implementadas para la evaluación
-✅ **Testing con Jest para asegurar calidad**
-✅ **Swagger documentado con ejemplos de uso**
-✅ **Compatibilidad con Swagger y Postman para facilitar el testeo**
-
----
-
-## 🛠 Autor
-Desarrollado por **Ayelen Villarruel* 🚀
