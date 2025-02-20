@@ -31,9 +31,9 @@ Esta es una API para acortar enlaces y redirigirlos a sus URLs originales. Inclu
      DB_NAME=link_tracker_db
      ```
 
-## 🗄️ Configuración de la Base de Datos
+## 🟩 Configuración de la Base de Datos
 
-Antes de ejecutar el proyecto, necesitas crear una base de datos en MySQL. Asegúrate de tener MySQL instalado y en ejecución.
+Antes de ejecutar el proyecto, necesitas crear una base de datos en MySQL. Asegúrete de tener MySQL instalado y en ejecución.
 
 ### **📌 Creación de la base de datos en MySQL**
 
@@ -82,10 +82,13 @@ http://localhost:3000/api
     "expirationDate": "2025-12-31"
   }
   ```
-- **Respuesta:**
+- **Respuesta exitosa:**
   ```json
   {
-    "shortenedUrl": "abc123"
+    "shortenedUrl": "abc123",
+    "link": "http://localhost:3000/links/abc123",
+    "target": "https://www.ejemplo.com",
+    "valid": true
   }
   ```
 
@@ -95,9 +98,20 @@ http://localhost:3000/api
 - **Query param:** `password` (opcional, si el enlace está protegido)
 - **Respuesta:** Redirección 302 a la URL original
 
+#### ⚠️ Posibles Errores:
+| Código | Mensaje |
+|--------|---------|
+| 404 | "The link does not exist." |
+| 403 | "This link has been invalidated." |
+| 403 | "This link has expired." |
+| 403 | "This link is password protected. Please provide a password." |
+| 403 | "Incorrect password." |
+
+---
+
 ### **Obtener estadísticas de un enlace**
 - **Método:** `GET /links/{shortenedUrl}/stats`
-- **Respuesta:**
+- **Respuesta exitosa:**
   ```json
   {
     "shortenedUrl": "abc123",
@@ -109,15 +123,50 @@ http://localhost:3000/api
   }
   ```
 
+- **Posibles Errores:**
+  ```json
+  {
+    "statusCode": 404,
+    "error": "Not Found",
+    "message": "The link does not exist."
+  }
+  ```
+
+---
+
 ### **Invalidar un enlace**
 - **Método:** `PUT /links/{shortenedUrl}/invalidate`
 - **Parámetro:** `shortenedUrl`
-- **Respuesta:**
+- **Respuesta exitosa:**
   ```json
   {
-    "message": "El enlace ha sido invalidado exitosamente."
+    "message": "The link has been successfully invalidated."
   }
   ```
+- **Error si el enlace no existe:**
+  ```json
+  {
+    "statusCode": 404,
+    "error": "Not Found",
+    "message": "The link does not exist."
+  }
+  ```
+
+---
+
+## 🧩 **Testing**
+
+### **Ejecutar pruebas unitarias**
+```sh
+npm run test
+```
+
+### **Ejecutar pruebas e2e (End-to-End)**
+```sh
+npm run test:e2e
+```
+
+📀 **Nota:** En los test unitarios y testeo e2e, se ha configurado el entorno `NODE_ENV` como `test` para deshabilitar la ejecución de código de sistema externo (como abrir el navegador).
 
 ---
 

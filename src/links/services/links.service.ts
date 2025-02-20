@@ -111,15 +111,24 @@ export class LinksService {
         message: 'This link has expired.',
       });
     }
-
-    if (link.passwordHash && (!password || !(await bcrypt.compare(password, link.passwordHash)))) {
-      throw new ForbiddenException({
-        statusCode: 403,
-        error: 'Forbidden',
-        message: 'Incorrect password.',
-      });
-    }
-
+    if (link.passwordHash) {
+      if (!password) {
+        throw new ForbiddenException({
+          statusCode: 403,
+          error: 'Forbidden',
+          message: 'This link is password protected. Please provide a password.',
+        });
+      }
+  
+      const isPasswordValid = await bcrypt.compare(password, link.passwordHash);
+      if (!isPasswordValid) {
+        throw new ForbiddenException({
+          statusCode: 403,
+          error: 'Forbidden',
+          message: 'Incorrect password.',
+         
+          });
+      }}
     return link;
   }
 

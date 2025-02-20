@@ -79,6 +79,22 @@ describe('LinksService', () => {
 
     await expect(service.getOriginalUrl('test123')).rejects.toThrow(ForbiddenException);
   });
+  
+  it('should return an error if no password is provided for a protected link', async () => {
+    const link = {
+      shortenedUrl: 'protected123',
+      isValid: true,
+      passwordHash: await bcrypt.hash('secure123', 10),
+    };
+  
+    mockRepository.findOne.mockResolvedValue(link);
+  
+    await expect(service.getOriginalUrl('protected123'))
+      .rejects.toThrow(ForbiddenException);
+  
+    await expect(service.getOriginalUrl('protected123'))
+      .rejects.toThrow('This link is password protected. Please provide a password.');
+  });
 
   it('should throw an error if the password is incorrect', async () => {
     const passwordHash = await bcrypt.hash('correct_password', 10);
@@ -158,4 +174,5 @@ describe('LinksService', () => {
 
     expect(mockRepository.save).toHaveBeenCalledWith(expect.objectContaining({ clicks: 6 }));
   });
+  
 });
