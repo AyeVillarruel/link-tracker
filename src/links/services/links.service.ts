@@ -1,12 +1,13 @@
-import { Injectable, Logger, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, ForbiddenException, HttpException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Link } from './entities/link.entity';
+import { Link } from '../entities/link.entity';
 import * as bcrypt from 'bcrypt';
-import { randomBytes } from 'crypto';
-import { CreateLinkDto } from './dto/create-link.dto';
 import * as child_process from 'child_process';
+import { randomBytes } from 'crypto';
+import { CreateLinkDto } from '../dto/create-link.dto';
 import { Request } from 'express';
+
 
 @Injectable()
 export class LinksService {
@@ -37,47 +38,27 @@ export class LinksService {
       target: dto.originalUrl, 
       valid: true, 
     };
-}
+  }
 
-
-  async getOriginalUrl(shortenedUrl: string, password?: string): Promise<string> {
-    const link = await this.linkRepository.findOne({ where: { shortenedUrl } });
-
-    if (!link) {
-      this.logger.warn(`Enlace no encontrado: ${shortenedUrl}`);
-      throw new NotFoundException('El enlace no existe.');
-    }
-
-    if (!link.isValid) {
-      throw new NotFoundException('Este enlace ha sido invalidado.');
-    }
-
-    if (link.expirationDate && new Date() > link.expirationDate) {
-      throw new NotFoundException('Este enlace ha expirado.');
-    }
-
-    if (link.passwordHash) {
-      if (!password) {
-        throw new ForbiddenException('Este enlace requiere una contraseña.');
-      }
-
-      const isPasswordValid = await bcrypt.compare(password, link.passwordHash);
-      if (!isPasswordValid) {
-        throw new ForbiddenException('Contraseña incorrecta.');
-      }
-    }
+  async getOriginalUrl(shortenedUrl: string, password?: string, req?: Request): Promise<string> {
+    const link = await this.validateLink(shortenedUrl, password);
 
     link.clicks += 1;
     await this.linkRepository.save(link);
 
+    const isBrowser = await this.isBrowserRequest(req);
+  if (!isBrowser) {
+    this.openInSystemBrowser(link.originalUrl);
+  }
+
     return link.originalUrl;
-}
+  }
 
   async getStats(shortenedUrl: string): Promise<object> {
     const link = await this.linkRepository.findOne({ where: { shortenedUrl } });
 
     if (!link) {
-      throw new NotFoundException('El enlace no existe.');
+      throw new NotFoundException('The link does not exist.');
     }
 
     return {
@@ -94,28 +75,70 @@ export class LinksService {
     const link = await this.linkRepository.findOne({ where: { shortenedUrl } });
 
     if (!link) {
-      this.logger.warn(`Intento de invalidar un link inexistente: ${shortenedUrl}`);
-      throw new NotFoundException('El enlace no existe.');
+      this.logger.warn(`Attempted to invalidate a non-existent link: ${shortenedUrl}`);
+      throw new NotFoundException('The link does not exist.');
     }
 
     link.isValid = false;
     await this.linkRepository.save(link);
 
-    return { message: 'El enlace ha sido invalidado exitosamente.' };
+    return { message: 'The link has been successfully invalidated.' };
+  }
+
+  private async validateLink(shortenedUrl: string, password?: string): Promise<Link> {
+    const link = await this.linkRepository.findOne({ where: { shortenedUrl } });
+
+    if (!link) {
+      throw new NotFoundException({
+        statusCode: 404,
+        error: 'Not Found',
+        message: 'The link does not exist.',
+      });
+    }
+
+    if (!link.isValid) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        error: 'Forbidden',
+        message: 'This link has been invalidated.',
+      });
+    }
+
+    if (link.expirationDate && new Date() > link.expirationDate) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        error: 'Forbidden',
+        message: 'This link has expired.',
+      });
+    }
+
+    if (link.passwordHash && (!password || !(await bcrypt.compare(password, link.passwordHash)))) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        error: 'Forbidden',
+        message: 'Incorrect password.',
+      });
+    }
+
+    return link;
   }
 
   async isBrowserRequest(req: Request): Promise<boolean> {
     const userAgent = req.headers['user-agent'] || '';
     const referer = req.headers['referer'] || '';
 
-    const isSwagger = referer.includes('/api') || /Swagger|PostmanRuntime/i.test(userAgent);
-    const isBrowser = /Mozilla|Chrome|Safari|Firefox|Edge/i.test(userAgent) && !isSwagger;
+    const isSwaggerOrPostman = referer.includes('/api') || /Swagger|PostmanRuntime/i.test(userAgent);
+    const isBrowser = /Mozilla|Chrome|Safari|Firefox|Edge/i.test(userAgent) && !isSwaggerOrPostman;
 
     return isBrowser;
   }
 
   openInSystemBrowser(url: string): void {
+    if (process.env.NODE_ENV === 'test') {
+      return; 
+    }
     const command = process.platform === 'win32' ? `start ${url}` : `open "${url}"`;
     child_process.exec(command);
   }
-}
+
+}  
